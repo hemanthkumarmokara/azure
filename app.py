@@ -19,14 +19,12 @@ AZURE_OPENAI_ENDPOINT = "https://hemanthazazureopnai.openai.azure.com/"
 AZURE_OPENAI_API_KEY = ""  # Replace with actual key
 AZURE_DEPLOYMENT_NAME = "gpt-4"
 
-openai.api_type = "azure"
-openai.api_key = AZURE_OPENAI_API_KEY
-openai.api_base = AZURE_OPENAI_ENDPOINT
-openai.api_version = "2023-12-01-preview"
-
-# Override OpenAI request session to disable SSL verification
-openai.requestssession = requests.Session()
-openai.requestssession.verify = False  # Disable SSL verification
+# Create an OpenAI client
+client = openai.AzureOpenAI(
+    api_key=AZURE_OPENAI_API_KEY,
+    api_version="2023-12-01-preview",
+    azure_endpoint=AZURE_OPENAI_ENDPOINT
+)
 
 # Function to extract IP addresses
 def extract_ips(text):
@@ -49,14 +47,16 @@ def chat():
     destination_ip = extracted_ips[1] if len(extracted_ips) > 1 else "N/A"
 
     try:
-        response = openai.ChatCompletion.create(
-            deployment_id=AZURE_DEPLOYMENT_NAME,
-            messages=[{"role": "system", "content": "You are a helpful assistant."},
-                      {"role": "user", "content": user_input}],
-            request_timeout=30
+        response = client.chat.completions.create(
+            model=AZURE_DEPLOYMENT_NAME,  # Use "model" instead of "deployment_id"
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": user_input}
+            ],
+            timeout=30
         )
 
-        bot_reply = response["choices"][0]["message"]["content"]
+        bot_reply = response.choices[0].message.content
 
         return jsonify({
             "response": bot_reply,
@@ -67,4 +67,4 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)  # Allows external access
