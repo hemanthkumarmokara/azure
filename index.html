@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetBot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #chatbox {
+            width: 50%;
+            margin: 20px auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            min-height: 300px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+        .user-message, .bot-message {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            max-width: 80%;
+            display: inline-block;
+        }
+        .user-message {
+            background-color: #0084ff;
+            color: white;
+            text-align: right;
+            float: right;
+        }
+        .bot-message {
+            background-color: #ddd;
+            text-align: left;
+            float: left;
+        }
+        .clear {
+            clear: both;
+        }
+        #ip-display {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>GWAN NetBot</h2>
+    <div id="chatbox"></div>
+
+    <input type="text" id="userInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)" />
+    <button onclick="sendMessage()">Send</button>
+
+    <div id="ip-display"></div>  <!-- Display extracted IPs -->
+
+    <script>
+        async function sendMessage() {
+            const userInputField = document.getElementById("userInput");
+            const userInput = userInputField.value.trim();
+            const chatbox = document.getElementById("chatbox");
+            const ipDisplay = document.getElementById("ip-display");
+
+            if (!userInput) return; // Prevent sending empty messages
+
+            // Append user's message
+            chatbox.innerHTML += `<div class="user-message">${userInput}</div><div class="clear"></div>`;
+            chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll
+
+            // Show "Typing..." message
+            chatbox.innerHTML += `<div class="bot-message" id="typing">Typing...</div><div class="clear"></div>`;
+            userInputField.value = ""; // Clear input field
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: userInput })
+                });
+
+                const result = await response.json();
+                document.getElementById("typing").remove(); // Remove "Typing..."
+
+                // Append bot's response
+                chatbox.innerHTML += `<div class="bot-message">${result.response || "Error: " + result.error}</div><div class="clear"></div>`;
+                chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll
+
+                // Update IP display if extracted
+                if (result.source_ip !== "N/A" && result.destination_ip !== "N/A") {
+                    ipDisplay.innerHTML = `<p>🔹 **Source IP:** ${result.source_ip} <br> 🔹 **Destination IP:** ${result.destination_ip}</p>`;
+                } else {
+                    ipDisplay.innerHTML = ""; // Clear IP display if no IPs found
+                }
+            } catch (error) {
+                document.getElementById("typing").remove();
+                chatbox.innerHTML += `<div class="bot-message">Error: Failed to connect.</div><div class="clear"></div>`;
+            }
+        }
+
+        // Allow sending messages by pressing Enter
+        function handleKeyPress(event) {
+            if (event.key === "Enter") sendMessage();
+        }
+    </script>
+
+</body>
+</html>
